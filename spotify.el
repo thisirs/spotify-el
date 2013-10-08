@@ -53,14 +53,17 @@
     (eval `(quote (progn ,@body)))))
 
 (spotify-eval-only-dbus
-  (defun spotify-dbus-call (interface method)
-    "On INTERFACE call METHOD via D-Bus on the Spotify service."
-    (dbus-call-method-asynchronously :session
-                                     "org.mpris.MediaPlayer2.spotify"
-                                     "/org/mpris/MediaPlayer2"
-                                     interface
-                                     method
-                                     nil))
+ (defun spotify-dbus-call (interface method &rest args)
+   "On INTERFACE call METHOD with ARGS via D-Bus on the Spotify
+service."
+   (apply 'dbus-call-method-asynchronously
+          :session
+          "org.mpris.MediaPlayer2.spotify"
+          "/org/mpris/MediaPlayer2"
+          interface
+          method
+          nil
+          args))
 
   (defun spotify-quit ()
     "Quit the spotify application."
@@ -137,11 +140,11 @@ to the mini buffer."
                     (t method))))))
 
 (defmacro spotify-defun-player-command (command)
-  `(defun ,(intern (concat "spotify-" (downcase command))) ()
+  `(defun ,(intern (concat "spotify-" (downcase command))) (&rest args)
      ,(format "Call %s on spotify player." command)
      (interactive)
      ,(if (fboundp 'dbus-init-bus)
-          `(spotify-dbus-call "org.mpris.MediaPlayer2.Player" ,command)
+          `(apply 'spotify-dbus-call "org.mpris.MediaPlayer2.Player" ,command args)
         `(spotify-osa-call ,command))
      (message "Spotify %s" ,command)))
 
@@ -159,6 +162,9 @@ to the mini buffer."
 
 ;;;###autoload (autoload 'spotify-previous "spotify" "Call Previous on spotify player." t)
 (spotify-defun-player-command "Previous")
+
+;;;###autoload (autoload 'spotify-openuri "spotify" "Play specified URI on spotify player." t)
+(spotify-defun-player-command "OpenUri")
 
 ;;;###autoload (autoload 'spotify-quit "spotify" "Quit the spotify application." t)
 ;;;###autoload (autoload 'spotify-enable-song-notifications "spotify" "Enable notifications for the currently playing song in spotify application." t)
